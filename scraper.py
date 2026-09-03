@@ -130,7 +130,6 @@ def main():
 
     leads.sort(key=rating_key, reverse=True)
 
-    # Nom de fichier garanti propre
     filename = f"leads_{specialty.replace(' ', '_').lower()}_{location.replace(' ', '_').lower()}.csv"
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=["Name", "Rating", "Reviews", "Phone", "Website", "Email"])
