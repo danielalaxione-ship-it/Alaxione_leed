@@ -73,7 +73,12 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+                try:
+                    # ⚡ Bolt: Wait for the main heading instead of a hardcoded 3s timeout
+                    # This significantly speeds up scraping by proceeding as soon as content is ready
+                    page.wait_for_selector('h1.DUwDvf', timeout=5000)
+                except Exception:
+                    page.wait_for_timeout(3000)
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
