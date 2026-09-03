@@ -1,3 +1,5 @@
+streamlit
+pandas
 playwright
-requests
 beautifulsoup4
+requests
