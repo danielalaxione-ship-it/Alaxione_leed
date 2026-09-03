@@ -4,6 +4,16 @@ import pandas as pd
 import os
 import glob
 
+# Installation automatique du navigateur Playwright au premier lancement sur le cloud
+@st.cache_resource
+def setup_playwright():
+    try:
+        subprocess.run(["playwright", "install", "chromium"], check=True)
+    except Exception as e:
+        print(f"Erreur d'installation Playwright: {e}")
+
+setup_playwright()
+
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
 st.title("🎯 Alaxione - Générateur de Leads Médicaux")
@@ -15,16 +25,13 @@ with st.form("search_form"):
     submitted = st.form_submit_button("Lancer la recherche")
 
 if submitted:
-    with st.spinner(f"Recherche de {specialty}s à {location} en cours... (Cela peut prendre 1 à 2 minutes)"):
-        
-        # On supprime TOUS les fichiers CSV existants pour repartir de zéro
+    with st.spinner(f"Recherche de {specialty}s à {location} en cours... (Patientez 1 minute)"):
         for f in glob.glob('*.csv'):
             try:
                 os.remove(f)
             except:
                 pass
 
-        # Exécution du scraper
         safe_spec = specialty.strip().replace(' ', '_').lower()
         safe_loc = location.strip().replace(' ', '_').lower()
         expected_file = f"leads_{safe_spec}_{safe_loc}.csv"
@@ -32,7 +39,6 @@ if submitted:
         cmd = f"python scraper.py --specialty \"{specialty}\" --location \"{location}\""
         result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
 
-    # Vérification stricte : le fichier spécifique DOIT exister
     if os.path.exists(expected_file) and os.path.getsize(expected_file) > 10:
         try:
             df = pd.read_csv(expected_file)
@@ -54,10 +60,7 @@ if submitted:
         except Exception as e:
             st.warning("Erreur lors de la lecture du fichier CSV.")
     else:
-        # Si le fichier n'a pas été créé, on affiche la vraie erreur technique
-        st.error(f"Le scraper n'a pas pu générer les résultats pour {location}. Google Maps bloque souvent les requêtes sans interface graphique sur ce serveur cloud.")
-        with st.expander("🔍 Voir les détails de l'erreur technique (Logs Playwright)"):
-            st.text("--- STDOUT ---")
+        st.error(f"Aucun résultat trouvé pour '{specialty}' à '{location}'.")
+        with st.expander("🔍 Voir les détails techniques"):
             st.text(result.stdout)
-            st.text("--- STDERR ---")
             st.text(result.stderr)
