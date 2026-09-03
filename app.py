@@ -4,7 +4,6 @@ import pandas as pd
 import os
 import glob
 
-# Installation automatique du navigateur au premier lancement
 @st.cache_resource
 def install_playwright():
     try:
