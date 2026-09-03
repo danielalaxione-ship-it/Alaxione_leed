@@ -1,12 +1,11 @@
 import streamlit as st
+import subprocess
+import pandas as pd
+import os
+import glob
 import traceback
 
 try:
-    import subprocess
-    import pandas as pd
-    import os
-    import glob
-
     st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
     st.title("🎯 Alaxione - Générateur de Leads Médicaux")
@@ -18,7 +17,7 @@ try:
         submitted = st.form_submit_button("Lancer la recherche")
 
     if submitted:
-        with st.spinner(f"Recherche de {specialty}s à {location} en cours..."):
+        with st.spinner(f"Recherche de {specialty}s à {location} en cours... (Patientez un instant)"):
             for f in glob.glob('*.csv'):
                 try:
                     os.remove(f)
@@ -51,7 +50,7 @@ try:
                 else:
                     st.warning("Le fichier généré est vide.")
             except Exception as e:
-                st.warning(f"Erreur lecture CSV: {e}")
+                st.warning(f"Erreur lors de la lecture du fichier CSV: {e}")
         else:
             st.error(f"Aucun résultat trouvé pour '{specialty}' à '{location}'.")
             with st.expander("🔍 Voir les détails techniques"):
