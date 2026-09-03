@@ -4,15 +4,6 @@ import pandas as pd
 import os
 import glob
 
-@st.cache_resource
-def install_playwright():
-    try:
-        subprocess.run(["playwright", "install", "chromium"], check=True)
-    except Exception as e:
-        print(f"Erreur Playwright: {e}")
-
-install_playwright()
-
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
 st.title("🎯 Alaxione - Générateur de Leads Médicaux")
@@ -24,7 +15,7 @@ with st.form("search_form"):
     submitted = st.form_submit_button("Lancer la recherche")
 
 if submitted:
-    with st.spinner(f"Recherche de {specialty}s à {location} en cours... (Patientez 1 minute)"):
+    with st.spinner(f"Recherche de {specialty}s à {location} en cours... (Patientez un instant)"):
         for f in glob.glob('*.csv'):
             try:
                 os.remove(f)
