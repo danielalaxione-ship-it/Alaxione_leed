@@ -4,15 +4,15 @@ import pandas as pd
 import os
 import glob
 
-# Installation automatique du navigateur Playwright au premier lancement sur le cloud
+# Installation automatique du navigateur au premier lancement
 @st.cache_resource
-def setup_playwright():
+def install_playwright():
     try:
         subprocess.run(["playwright", "install", "chromium"], check=True)
     except Exception as e:
-        print(f"Erreur d'installation Playwright: {e}")
+        print(f"Erreur Playwright: {e}")
 
-setup_playwright()
+install_playwright()
 
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
