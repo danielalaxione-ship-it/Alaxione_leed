@@ -45,15 +45,19 @@ def main():
         except:
             pass
 
-        page.wait_for_timeout(3000)
-
+        # Bolt Optimization: Replaced static wait_for_timeout with dynamic conditions to speed up feed loading and link scraping.
+        # This prevents waiting fixed times when the DOM is already ready.
         feed_selector = 'div[role="feed"]'
         try:
             page.wait_for_selector(feed_selector, timeout=5000)
             for _ in range(3):
                 page.hover(feed_selector)
                 page.mouse.wheel(0, 2000)
-                page.wait_for_timeout(2000)
+                try:
+                    current_count = page.locator('a[href*="/maps/place/"]').count()
+                    page.wait_for_function(f"document.querySelectorAll('a[href*=\"/maps/place/\"]').length > {current_count}", timeout=2000)
+                except:
+                    pass
         except:
             print("Feed not found, moving on.")
 
@@ -73,7 +77,13 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+
+                # Bolt Optimization: Wait specifically for the name element to be populated instead of static timeout
+                # It avoids a rigid 3-second sleep and speeds up processing time substantially.
+                try:
+                    page.wait_for_function("document.querySelector('h1.DUwDvf') && document.querySelector('h1.DUwDvf').innerText.trim() !== ''", timeout=3000)
+                except:
+                    pass
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
