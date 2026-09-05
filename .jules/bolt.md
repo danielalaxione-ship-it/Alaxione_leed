@@ -1,0 +1,3 @@
+## 2024-05-24 - Avoid fixed timeouts in scraping loops
+**Learning:** Using a static timeout like `page.wait_for_timeout(3000)` inside a loop that iterates over many pages (e.g., scraping individual places) forces the script to wait the full duration for every single item, regardless of how fast the page actually loads. This scales poorly and creates a massive bottleneck.
+**Action:** Always prefer dynamic waiting (e.g., `page.wait_for_selector(..., timeout=3000)`) in Playwright or similar tools over fixed timeouts, especially within iterative processes. This ensures we only wait exactly as long as needed.

@@ -73,7 +73,14 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+
+                # OPTIMIZATION: Replaced static wait_for_timeout(3000) with dynamic wait_for_selector
+                # This reduces the wait time per place from a fixed 3s down to only the time it takes
+                # for the target element to load (or up to 3s if it's slow/missing).
+                try:
+                    page.wait_for_selector('h1.DUwDvf', timeout=3000)
+                except:
+                    pass
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
