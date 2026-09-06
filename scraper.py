@@ -45,7 +45,7 @@ def main():
         except:
             pass
 
-        page.wait_for_timeout(3000)
+        # ⚡ Bolt Optimization: Removed static 3s wait, relying on wait_for_selector below
 
         feed_selector = 'div[role="feed"]'
         try:
@@ -73,7 +73,11 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+                # ⚡ Bolt Optimization: Replaced static 3s wait with dynamic wait for title element
+                try:
+                    page.locator('h1.DUwDvf').first.wait_for(timeout=3000)
+                except:
+                    pass
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
