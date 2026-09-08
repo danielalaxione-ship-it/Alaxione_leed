@@ -1,0 +1,3 @@
+## 2024-09-08 - Playwright wait_for_timeout and inner_text() anti-pattern
+**Learning:** In Playwright Python, `page.wait_for_timeout(3000)` creates a static block that heavily penalizes scraping loops (e.g., waiting 3s per item in a 30 item list). Furthermore, using `locator.first.inner_text()` implicitly waits for the element to become visible, which can cause severe slowdowns or timeouts if Google Maps DOM structure creates "attached" but technically non-visible h1/span elements.
+**Action:** Replace `page.wait_for_timeout` with `page.wait_for_selector(..., state='attached')` and change `.inner_text()` to `.text_content()` to grab text immediately once attached without waiting for visibility checks.
