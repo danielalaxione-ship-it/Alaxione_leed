@@ -1,0 +1,3 @@
+## 2024-05-18 - Playwright Extraction Speed
+**Learning:** `inner_text()` triggers an expensive layout pass in Playwright to calculate visibility and CSS styles, while `text_content()` simply reads the DOM, making it considerably faster for data extraction. Also, static waits like `page.wait_for_timeout(3000)` are performance killers; dynamic waits (`wait_for()`, `wait_for_selector()`) are crucial for speed.
+**Action:** Always prefer `text_content()` over `inner_text()` when scraping text content where layout precision isn't required. Always use dynamic waits instead of static timeouts.
