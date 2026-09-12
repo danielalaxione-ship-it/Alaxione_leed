@@ -73,21 +73,32 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+
+                # BOLT OPTIMIZATION: Replaced static 3s wait with dynamic wait_for_load_state
+                # This ensures we only wait as long as necessary, preventing race conditions
+                # with synchronous count() checks later on without penalizing fast-loading pages.
+                try:
+                    page.wait_for_selector('h1.DUwDvf', state='attached', timeout=5000)
+                except:
+                    pass
+                page.wait_for_load_state('domcontentloaded')
 
                 name_locator = page.locator('h1.DUwDvf')
-                name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
+                # BOLT OPTIMIZATION: Replaced inner_text() with text_content()
+                # text_content() avoids Playwright's layout checks for element visibility
+                # significantly reducing CPU time on complex DOMs like Google Maps.
+                name = name_locator.first.text_content() if name_locator.count() > 0 else "N/A"
 
                 rating = "N/A"
                 reviews = "0"
                 try:
                     rating_elem = page.locator('div.F7nice > span > span[aria-hidden="true"]').first
                     if rating_elem.count() > 0:
-                         rating = rating_elem.inner_text().strip()
+                         rating = rating_elem.text_content().strip()
 
                     reviews_elem = page.locator('div.F7nice > span:nth-child(2) > span > span[aria-label]').first
                     if reviews_elem.count() > 0:
-                         reviews_text = reviews_elem.inner_text()
+                         reviews_text = reviews_elem.text_content()
                          reviews = re.sub(r'[^0-9]', '', reviews_text)
                 except Exception as e:
                     print(f"Rating extraction error: {e}")
@@ -95,7 +106,7 @@ def main():
                 phone_locator = page.locator('button[data-tooltip="Copier le numéro de téléphone"] div.Io6YTe')
                 if phone_locator.count() == 0:
                      phone_locator = page.locator('button[data-tooltip="Copy phone number"] div.Io6YTe')
-                phone = phone_locator.first.inner_text() if phone_locator.count() > 0 else "N/A"
+                phone = phone_locator.first.text_content() if phone_locator.count() > 0 else "N/A"
 
                 actual_website_url = "N/A"
                 website_anchor = page.locator('a[data-tooltip="Ouvrir le site Web"]')
