@@ -1,0 +1,3 @@
+## 2024-03-24 - Avoid `page.wait_for_timeout` & `inner_text()` in Playwright Scraping Loops
+**Learning:** Using `page.wait_for_timeout(3000)` inside an `O(N)` loop adds massive overhead when scraping Google Maps places. Moreover, using `.inner_text()` implicitly waits for visibility, which can cause timeout failures or extra layout thrashing overhead for conditionally hidden DOM elements like Google Maps' title and review texts.
+**Action:** Always prefer dynamic waits like `page.wait_for_selector(..., state='attached')`. For simple text extraction where visibility checks are not required, use `.text_content()` which skips visibility validations and is significantly faster and less prone to random timeouts on attached but hidden nodes.
