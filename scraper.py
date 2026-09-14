@@ -73,21 +73,26 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+                # ⚡ Bolt Optimization: Replacing static wait with dynamic wait on title element attachment
+                try:
+                    page.wait_for_selector('h1.DUwDvf', state='attached', timeout=5000)
+                except Exception:
+                    pass
 
                 name_locator = page.locator('h1.DUwDvf')
-                name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
+                # ⚡ Bolt Optimization: Using .text_content() instead of .inner_text() to skip CSS layout visibility checks
+                name = name_locator.first.text_content() if name_locator.count() > 0 else "N/A"
 
                 rating = "N/A"
                 reviews = "0"
                 try:
                     rating_elem = page.locator('div.F7nice > span > span[aria-hidden="true"]').first
                     if rating_elem.count() > 0:
-                         rating = rating_elem.inner_text().strip()
+                         rating = rating_elem.text_content().strip()
 
                     reviews_elem = page.locator('div.F7nice > span:nth-child(2) > span > span[aria-label]').first
                     if reviews_elem.count() > 0:
-                         reviews_text = reviews_elem.inner_text()
+                         reviews_text = reviews_elem.text_content()
                          reviews = re.sub(r'[^0-9]', '', reviews_text)
                 except Exception as e:
                     print(f"Rating extraction error: {e}")
@@ -95,7 +100,7 @@ def main():
                 phone_locator = page.locator('button[data-tooltip="Copier le numéro de téléphone"] div.Io6YTe')
                 if phone_locator.count() == 0:
                      phone_locator = page.locator('button[data-tooltip="Copy phone number"] div.Io6YTe')
-                phone = phone_locator.first.inner_text() if phone_locator.count() > 0 else "N/A"
+                phone = phone_locator.first.text_content() if phone_locator.count() > 0 else "N/A"
 
                 actual_website_url = "N/A"
                 website_anchor = page.locator('a[data-tooltip="Ouvrir le site Web"]')
