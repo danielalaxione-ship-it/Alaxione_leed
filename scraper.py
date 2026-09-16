@@ -92,26 +92,35 @@ def main():
                 rating = "N/A"
                 reviews = "0"
                 
-                # EXTRACTION ROBUSTE DE LA NOTE ET DES AVIS VIA LE CONTENEUR GLOBAL
+                # MÉTHODE ULTRA-ROBUSTE POUR NOTE ET AVIS
                 try:
                     f7nice = page.locator('div.F7nice').first
                     if f7nice.count() > 0:
                         text_block = f7nice.inner_text()
                         
-                        # Recherche de la note (ex: 4.9 ou 4,9)
+                        # Extraction de la note
                         rating_match = re.search(r'([0-9][,\.][0-9])', text_block)
                         if rating_match:
                             rating = rating_match.group(1).replace(',', '.')
-                        
-                        # Recherche du nombre d'avis (ex: (60) ou 60 avis)
-                        reviews_match = re.search(r'\(?([0-9\s]+)\)?\s*(?:avis|reviews)', text_block, re.IGNORECASE)
-                        if not reviews_match:
-                            reviews_match = re.search(r'\(([0-9\s]+)\)', text_block)
-                        
-                        if reviews_match:
-                            reviews = re.sub(r'[^0-9]', '', reviews_match.group(1))
+                        elif "5" in text_block:
+                            rating = "5.0"
+
+                    # Extraction du nombre d'avis via l'attribut aria-label officiel de Google
+                    review_span = page.locator('span[aria-label*="avis"], span[aria-label*="reviews"]').first
+                    if review_span.count() > 0:
+                        aria = review_span.get_attribute("aria-label")
+                        num_clean = re.sub(r'[^0-9]', '', aria)
+                        if num_clean:
+                            reviews = num_clean
+
+                    # Si toujours 0, on cherche entre parenthèses dans le bloc note
+                    if reviews == "0" and f7nice.count() > 0:
+                        m = re.search(r'\(([0-9\s]+)\)', f7nice.inner_text())
+                        if m:
+                            reviews = re.sub(r'[^0-9]', '', m.group(1))
+
                 except Exception as e:
-                    print(f"Rating/Reviews extraction error: {e}")
+                    print(f"Extraction error: {e}")
 
                 phone_locator = page.locator('button[data-tooltip="Copier le numéro de téléphone"] div.Io6YTe')
                 if phone_locator.count() == 0:
