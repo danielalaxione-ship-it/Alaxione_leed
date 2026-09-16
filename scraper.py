@@ -4,29 +4,28 @@ import argparse
 from playwright.sync_api import sync_playwright
 import requests
 from bs4 import BeautifulSoup
-import time
 
 def extract_email_from_url(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=7)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         text = soup.get_text()
         emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', text)
         if emails:
             return emails[0]
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
+    except:
+        pass
     return ""
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape medical leads from Google Maps")
-    parser.add_argument("--specialty", type=str, help="Medical specialty (e.g., ophtalmologue)")
-    parser.add_argument("--location", type=str, help="Location (e.g., Marseille)")
+    parser.add_argument("--specialty", type=str, default="ophtalmologue")
+    parser.add_argument("--location", type=str, default="Marseille")
     args = parser.parse_args()
 
-    specialty = args.specialty or "ophtalmologue"
-    location = args.location or "Marseille"
+    specialty = args.specialty
+    location = args.location
 
     search_query = f"{specialty} {location}"
     print(f"Searching for: {search_query}")
@@ -35,28 +34,42 @@ def main():
     place_urls = []
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        # PARAMÈTRES ANTI-CRASH MÉMOIRE POUR SERVEUR CLOUD
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-dev-shm-usage", # Essentiel pour éviter les crashs mémoire (OOM)
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-gpu"
+            ]
+        )
+        context = browser.new_context()
+        page = context.new_page()
+        
+        # On bloque absolument tout ce qui est inutile (images, styles, scripts externes)
+        page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "stylesheet", "font", "other"] else route.continue_())
+
         page.goto(f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}")
 
         try:
-            page.wait_for_selector("button:has-text('Tout accepter')", timeout=5000)
+            page.wait_for_selector("button:has-text('Tout accepter')", timeout=3000)
             page.click("button:has-text('Tout accepter')")
         except:
             pass
 
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(2000)
 
         feed_selector = 'div[role="feed"]'
         try:
             page.wait_for_selector(feed_selector, timeout=5000)
-            # C'est ici que la magie opère : on scrolle 15 fois pour charger beaucoup plus de résultats
-            for _ in range(15):
+            # Limite de sécurité à 4 scrolls (environ 30 à 45 leads)
+            for _ in range(4):
                 page.hover(feed_selector)
                 page.mouse.wheel(0, 5000)
-                page.wait_for_timeout(2000)
+                page.wait_for_timeout(1500)
         except:
-            print("Feed not found, moving on.")
+            pass
 
         links_locator = page.locator('a[href*="/maps/place/"]')
         num_links = links_locator.count()
@@ -67,14 +80,14 @@ def main():
                 href = links_locator.nth(i).get_attribute("href")
                 if href and href not in place_urls:
                     place_urls.append(href)
-            except Exception as e:
-                print(f"Error getting href for link {i}: {e}")
+            except:
+                pass
 
         for i, url in enumerate(place_urls):
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(3000)
+                page.wait_for_timeout(1500)
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
@@ -90,8 +103,8 @@ def main():
                     if reviews_elem.count() > 0:
                          reviews_text = reviews_elem.inner_text()
                          reviews = re.sub(r'[^0-9]', '', reviews_text)
-                except Exception as e:
-                    print(f"Rating extraction error: {e}")
+                except:
+                    pass
 
                 phone_locator = page.locator('button[data-tooltip="Copier le numéro de téléphone"] div.Io6YTe')
                 if phone_locator.count() == 0:
@@ -118,15 +131,15 @@ def main():
                     "Website": actual_website_url,
                     "Email": email
                 })
-            except Exception as e:
-                print(f"Error processing item {i}: {e}")
+            except:
+                pass
 
         browser.close()
 
     def rating_key(lead):
         try:
             return float(lead["Rating"].replace(',', '.'))
-        except ValueError:
+        except:
             return -1.0
 
     leads.sort(key=rating_key, reverse=True)
@@ -138,7 +151,6 @@ def main():
         writer.writerows(leads)
 
     print(f"EXPORT_FILE_NAME:{filename}")
-    print(f"Scraping complete. Exported {len(leads)} leads to {filename}")
 
 if __name__ == "__main__":
     main()
