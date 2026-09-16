@@ -25,3 +25,5 @@ libxrender1
 libxss1
 libxtst6
 fonts-liberation
+libxkbcommon0
+libxkbcommon-x11-0
