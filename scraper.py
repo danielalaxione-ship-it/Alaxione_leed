@@ -34,11 +34,10 @@ def main():
     place_urls = []
 
     with sync_playwright() as p:
-        # PARAMÈTRES ANTI-CRASH MÉMOIRE POUR SERVEUR CLOUD
         browser = p.chromium.launch(
             headless=True,
             args=[
-                "--disable-dev-shm-usage", # Essentiel pour éviter les crashs mémoire (OOM)
+                "--disable-dev-shm-usage",
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-gpu"
@@ -47,7 +46,6 @@ def main():
         context = browser.new_context()
         page = context.new_page()
         
-        # On bloque absolument tout ce qui est inutile (images, styles, scripts externes)
         page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "stylesheet", "font", "other"] else route.continue_())
 
         page.goto(f"https://www.google.com/maps/search/{search_query.replace(' ', '+')}")
@@ -63,7 +61,6 @@ def main():
         feed_selector = 'div[role="feed"]'
         try:
             page.wait_for_selector(feed_selector, timeout=5000)
-            # Limite de sécurité à 4 scrolls (environ 30 à 45 leads)
             for _ in range(4):
                 page.hover(feed_selector)
                 page.mouse.wheel(0, 5000)
@@ -129,7 +126,8 @@ def main():
                     "Reviews": reviews,
                     "Phone": phone,
                     "Website": actual_website_url,
-                    "Email": email
+                    "Email": email,
+                    "URL_Google_Maps": url  # <--- LA NOUVELLE DONNÉE EST ICI
                 })
             except:
                 pass
@@ -146,7 +144,8 @@ def main():
 
     filename = f"leads_{specialty.replace(' ', '_').lower()}_{location.replace(' ', '_').lower()}.csv"
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=["Name", "Rating", "Reviews", "Phone", "Website", "Email"])
+        # <--- ON AJOUTE LA COLONNE DANS LE FICHIER CSV ICI
+        writer = csv.DictWriter(file, fieldnames=["Name", "Rating", "Reviews", "Phone", "Website", "Email", "URL_Google_Maps"])
         writer.writeheader()
         writer.writerows(leads)
 
