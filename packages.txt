@@ -27,3 +27,4 @@ libxtst6
 fonts-liberation
 libxkbcommon0
 libxkbcommon-x11-0
+libxcb-dri3-0
