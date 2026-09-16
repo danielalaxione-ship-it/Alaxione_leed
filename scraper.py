@@ -127,7 +127,7 @@ def main():
                     "Phone": phone,
                     "Website": actual_website_url,
                     "Email": email,
-                    "URL_Google_Maps": url  # <--- LA NOUVELLE DONNÉE EST ICI
+                    "URL_Google_Maps": url
                 })
             except:
                 pass
@@ -142,9 +142,12 @@ def main():
 
     leads.sort(key=rating_key, reverse=True)
 
-    filename = f"leads_{specialty.replace(' ', '_').lower()}_{location.replace(' ', '_').lower()}.csv"
+    # NOM DE FICHIER EXPLICITE : leads_specialite_ville.csv
+    safe_spec = re.sub(r'[^a-zA-Z0-9]', '_', specialty.lower())
+    safe_loc = re.sub(r'[^a-zA-Z0-9]', '_', location.lower())
+    filename = f"leads_{safe_spec}_{safe_loc}.csv"
+
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        # <--- ON AJOUTE LA COLONNE DANS LE FICHIER CSV ICI
         writer = csv.DictWriter(file, fieldnames=["Name", "Rating", "Reviews", "Phone", "Website", "Email", "URL_Google_Maps"])
         writer.writeheader()
         writer.writerows(leads)
