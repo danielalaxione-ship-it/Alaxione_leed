@@ -50,9 +50,10 @@ def main():
         feed_selector = 'div[role="feed"]'
         try:
             page.wait_for_selector(feed_selector, timeout=5000)
-            for _ in range(3):
+            # C'est ici que la magie opère : on scrolle 15 fois pour charger beaucoup plus de résultats
+            for _ in range(15):
                 page.hover(feed_selector)
-                page.mouse.wheel(0, 2000)
+                page.mouse.wheel(0, 5000)
                 page.wait_for_timeout(2000)
         except:
             print("Feed not found, moving on.")
