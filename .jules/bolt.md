@@ -1,0 +1,3 @@
+## 2024-09-16 - Race Condition with Playwright Dynamic Waits
+**Learning:** In Playwright scraping scripts that use synchronous element checks (like `locator.count() > 0`) for multiple optional elements, removing a global static wait in favor of a single dynamic wait (e.g., on a title element) creates a severe race condition. Subsequent elements that haven't fully rendered will immediately return `0` for `.count()`, leading to massive data loss.
+**Action:** When extracting multiple optional elements using synchronous checks, either use a safe global timeout/wait state to ensure all elements have time to render, or convert all synchronous checks into explicit, auto-waiting Playwright assertions (which can be slower if many elements don't exist).
