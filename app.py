@@ -16,7 +16,11 @@ with st.form("search_form"):
     submitted = st.form_submit_button("Lancer la recherche")
 
 if submitted:
-    with st.spinner(f"Recherche de {specialty}s à {location} en cours... (Cela peut prendre 1 à 2 minutes)"):
+    # Nettoyage automatique des espaces tapés par erreur au début ou à la fin
+    specialty_clean = specialty.strip()
+    location_clean = location.strip()
+    
+    with st.spinner(f"Recherche de {specialty_clean}s à {location_clean} en cours... (Cela peut prendre 1 à 2 minutes)"):
         for f in glob.glob('*.csv'):
             try:
                 os.remove(f)
@@ -26,12 +30,12 @@ if submitted:
         # Installation de Chromium dans l'environnement virtuel si nécessaire
         subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
 
-        safe_spec = specialty.strip().replace(' ', '_').lower()
-        safe_loc = location.strip().replace(' ', '_').lower()
+        safe_spec = specialty_clean.replace(' ', '_').lower()
+        safe_loc = location_clean.replace(' ', '_').lower()
         expected_file = f"leads_{safe_spec}_{safe_loc}.csv"
 
-        # Exécution avec le bon interpréteur Python
-        cmd = [sys.executable, "scraper.py", "--specialty", specialty, "--location", location]
+        # Exécution avec le bon interpréteur Python et les mots nettoyés
+        cmd = [sys.executable, "scraper.py", "--specialty", specialty_clean, "--location", location_clean]
         result = subprocess.run(cmd, capture_output=True, text=True)
 
     if os.path.exists(expected_file) and os.path.getsize(expected_file) > 10:
@@ -39,7 +43,7 @@ if submitted:
             df = pd.read_csv(expected_file)
             if not df.empty and len(df.columns) > 1:
                 exact_count = len(df.dropna(how='all'))
-                st.success(f"Recherche pour {location} terminée avec succès !")
+                st.success(f"Recherche pour {location_clean} terminée avec succès !")
                 st.metric("Prospects trouvés", exact_count)
                 st.dataframe(df)
 
@@ -55,7 +59,7 @@ if submitted:
         except Exception as e:
             st.warning(f"Erreur lors de la lecture du fichier CSV : {e}")
     else:
-        st.error(f"Aucun résultat trouvé pour '{specialty}' à '{location}'.")
+        st.error(f"Aucun résultat trouvé pour '{specialty_clean}' à '{location_clean}'.")
         with st.expander("🔍 Voir les détails techniques"):
             st.text("STDOUT :")
             st.text(result.stdout)
