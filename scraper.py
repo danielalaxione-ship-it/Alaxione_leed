@@ -91,17 +91,27 @@ def main():
 
                 rating = "N/A"
                 reviews = "0"
+                
+                # EXTRACTION ROBUSTE DE LA NOTE ET DES AVIS VIA LE CONTENEUR GLOBAL
                 try:
-                    rating_elem = page.locator('div.F7nice > span > span[aria-hidden="true"]').first
-                    if rating_elem.count() > 0:
-                         rating = rating_elem.inner_text().strip()
-
-                    reviews_elem = page.locator('div.F7nice > span:nth-child(2) > span > span[aria-label]').first
-                    if reviews_elem.count() > 0:
-                         reviews_text = reviews_elem.inner_text()
-                         reviews = re.sub(r'[^0-9]', '', reviews_text)
-                except:
-                    pass
+                    f7nice = page.locator('div.F7nice').first
+                    if f7nice.count() > 0:
+                        text_block = f7nice.inner_text()
+                        
+                        # Recherche de la note (ex: 4.9 ou 4,9)
+                        rating_match = re.search(r'([0-9][,\.][0-9])', text_block)
+                        if rating_match:
+                            rating = rating_match.group(1).replace(',', '.')
+                        
+                        # Recherche du nombre d'avis (ex: (60) ou 60 avis)
+                        reviews_match = re.search(r'\(?([0-9\s]+)\)?\s*(?:avis|reviews)', text_block, re.IGNORECASE)
+                        if not reviews_match:
+                            reviews_match = re.search(r'\(([0-9\s]+)\)', text_block)
+                        
+                        if reviews_match:
+                            reviews = re.sub(r'[^0-9]', '', reviews_match.group(1))
+                except Exception as e:
+                    print(f"Rating/Reviews extraction error: {e}")
 
                 phone_locator = page.locator('button[data-tooltip="Copier le numéro de téléphone"] div.Io6YTe')
                 if phone_locator.count() == 0:
@@ -142,7 +152,6 @@ def main():
 
     leads.sort(key=rating_key, reverse=True)
 
-    # NOM DE FICHIER EXPLICITE : leads_specialite_ville.csv
     safe_spec = re.sub(r'[^a-zA-Z0-9]', '_', specialty.lower())
     safe_loc = re.sub(r'[^a-zA-Z0-9]', '_', location.lower())
     filename = f"leads_{safe_spec}_{safe_loc}.csv"
