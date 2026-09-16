@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import glob
 import sys
+import re
 
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
@@ -16,25 +17,23 @@ with st.form("search_form"):
     submitted = st.form_submit_button("Lancer la recherche")
 
 if submitted:
-    # Nettoyage automatique des espaces tapés par erreur au début ou à la fin
     specialty_clean = specialty.strip()
     location_clean = location.strip()
     
-    with st.spinner(f"Recherche de {specialty_clean}s à {location_clean} en cours... (Cela peut prendre 1 à 2 minutes)"):
-        for f in glob.glob('*.csv'):
+    with st.spinner(f"Recherche de {specialty_clean}s à {location_clean} en cours... (Cela peut prendre un moment)"):
+        # Nettoyage des anciens fichiers CSV pour éviter les confusions
+        for f in glob.glob('leads_*.csv'):
             try:
                 os.remove(f)
             except:
                 pass
 
-        # Installation de Chromium dans l'environnement virtuel si nécessaire
         subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
 
-        safe_spec = specialty_clean.replace(' ', '_').lower()
-        safe_loc = location_clean.replace(' ', '_').lower()
+        safe_spec = re.sub(r'[^a-zA-Z0-9]', '_', specialty_clean.lower())
+        safe_loc = re.sub(r'[^a-zA-Z0-9]', '_', location_clean.lower())
         expected_file = f"leads_{safe_spec}_{safe_loc}.csv"
 
-        # Exécution avec le bon interpréteur Python et les mots nettoyés
         cmd = [sys.executable, "scraper.py", "--specialty", specialty_clean, "--location", location_clean]
         result = subprocess.run(cmd, capture_output=True, text=True)
 
