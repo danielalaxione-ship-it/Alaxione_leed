@@ -44,6 +44,10 @@ if submitted:
                 exact_count = len(df.dropna(how='all'))
                 st.success(f"Recherche pour {location_clean} terminée avec succès !")
                 st.metric("Prospects trouvés", exact_count)
+                cols = df.columns.tolist()
+                preferred_order = ["Name", "Rating", "Reviews", "Phone", "Email", "Code Postal", "Ville", "Website", "URL_Google_Maps"]
+                final_order = [c for c in preferred_order if c in cols] + [c for c in cols if c not in preferred_order]
+                df = df[final_order]
                 st.dataframe(df)
 
                 with open(expected_file, "rb") as file:

@@ -87,7 +87,7 @@ def main():
                 page.wait_for_timeout(1500)
 
                 name_locator = page.locator('h1.DUwDvf')
-                name = name_locator.first.inner_text() if name_locator.count() > 0 else "N/A"
+                name = name_locator.first.text_content() if name_locator.count() > 0 else "N/A"
 
                 rating = "N/A"
                 reviews = "0"
@@ -96,7 +96,7 @@ def main():
                 try:
                     f7nice = page.locator('div.F7nice').first
                     if f7nice.count() > 0:
-                        text_block = f7nice.inner_text()
+                        text_block = f7nice.text_content()
                         
                         # Extraction de la note
                         rating_match = re.search(r'([0-9][,\.][0-9])', text_block)
@@ -115,7 +115,7 @@ def main():
 
                     # Si toujours 0, on cherche entre parenthèses dans le bloc note
                     if reviews == "0" and f7nice.count() > 0:
-                        m = re.search(r'\(([0-9\s]+)\)', f7nice.inner_text())
+                        m = re.search(r'\(([0-9\s]+)\)', f7nice.text_content())
                         if m:
                             reviews = re.sub(r'[^0-9]', '', m.group(1))
 
@@ -125,7 +125,7 @@ def main():
                 phone_locator = page.locator('button[data-tooltip="Copier le numéro de téléphone"] div.Io6YTe')
                 if phone_locator.count() == 0:
                      phone_locator = page.locator('button[data-tooltip="Copy phone number"] div.Io6YTe')
-                phone = phone_locator.first.inner_text() if phone_locator.count() > 0 else "N/A"
+                phone = phone_locator.first.text_content() if phone_locator.count() > 0 else "N/A"
 
                 actual_website_url = "N/A"
                 website_anchor = page.locator('a[data-tooltip="Ouvrir le site Web"]')
@@ -139,6 +139,22 @@ def main():
                 if actual_website_url != "N/A":
                     email = extract_email_from_url(actual_website_url)
 
+                address_locator = page.locator('button[data-tooltip="Copier l\'adresse"] div.Io6YTe')
+                if address_locator.count() == 0:
+                     address_locator = page.locator('button[data-tooltip="Copy address"] div.Io6YTe')
+                address = address_locator.first.text_content() if address_locator.count() > 0 else "N/A"
+
+                postal_code = "N/A"
+                city = "N/A"
+                if address != "N/A":
+                    match = re.search(r'\b(\d{5})\s+([^,]+)', address)
+                    if match:
+                        postal_code = match.group(1)
+                        city = match.group(2).strip()
+                    else:
+                        # Fallback parsing or just keep full address if no match
+                        city = address.split(',')[-1].strip() if ',' in address else address
+
                 leads.append({
                     "Name": name,
                     "Rating": rating,
@@ -146,6 +162,8 @@ def main():
                     "Phone": phone,
                     "Website": actual_website_url,
                     "Email": email,
+                    "Code Postal": postal_code,
+                    "Ville": city,
                     "URL_Google_Maps": url
                 })
             except:
@@ -166,7 +184,7 @@ def main():
     filename = f"leads_{safe_spec}_{safe_loc}.csv"
 
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=["Name", "Rating", "Reviews", "Phone", "Website", "Email", "URL_Google_Maps"])
+        writer = csv.DictWriter(file, fieldnames=["Name", "Rating", "Reviews", "Phone", "Website", "Email", "Code Postal", "Ville", "URL_Google_Maps"])
         writer.writeheader()
         writer.writerows(leads)
 
