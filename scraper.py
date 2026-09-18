@@ -61,16 +61,50 @@ def main():
         feed_selector = 'div[role="feed"]'
         try:
             page.wait_for_selector(feed_selector, timeout=5000)
-            for _ in range(4):
-                page.hover(feed_selector)
-                page.mouse.wheel(0, 5000)
+            previous_count = 0
+            retries = 0
+            max_retries = 4
+
+            while True:
+                page.evaluate('''(selector) => {
+                    const feed = document.querySelector(selector);
+                    if(feed) feed.scrollTo(0, feed.scrollHeight);
+                }''', feed_selector)
+
                 page.wait_for_timeout(1500)
+
+                current_count = page.locator('a[href*="/maps/place/"]').count()
+                if current_count == previous_count:
+                    retries += 1
+                    if retries >= max_retries:
+                        break
+                else:
+                    retries = 0
+                previous_count = current_count
         except:
             pass
 
         links_locator = page.locator('a[href*="/maps/place/"]')
         num_links = links_locator.count()
         print(f"Found {num_links} places.")
+
+        feed_data = page.evaluate('''() => {
+            const result = {};
+            const items = document.querySelectorAll('a[href*="/maps/place/"]');
+            for(const item of items) {
+                const href = item.href;
+                let container = item.parentElement;
+                while(container && container.getAttribute('role') !== 'feed') {
+                    const span = container.querySelector('span[aria-label*="stars"], span[aria-label*="étoiles"]');
+                    if(span) {
+                        result[href] = span.getAttribute('aria-label');
+                        break;
+                    }
+                    container = container.parentElement;
+                }
+            }
+            return result;
+        }''')
 
         for i in range(num_links):
             try:
@@ -105,19 +139,66 @@ def main():
                         elif "5" in text_block:
                             rating = "5.0"
 
-                    # Extraction du nombre d'avis via l'attribut aria-label officiel de Google
-                    review_span = page.locator('span[aria-label*="avis"], span[aria-label*="reviews"]').first
-                    if review_span.count() > 0:
-                        aria = review_span.get_attribute("aria-label")
-                        num_clean = re.sub(r'[^0-9]', '', aria)
-                        if num_clean:
-                            reviews = num_clean
+                    # Extraction du nombre d'avis
+                    button_texts = page.evaluate('''() => {
+                        return Array.from(document.querySelectorAll('button'))
+                                    .map(b => b.textContent)
+                                    .filter(t => t && (/\\bavis\\b/i.test(t) || /\\breviews\\b/i.test(t)));
+                    }''')
+
+                    for text in button_texts:
+                        match = re.search(r'([\d\s,\.]+)\s*(?:avis|reviews)', text, re.IGNORECASE)
+                        if match:
+                            num_clean = re.sub(r'[^\d]', '', match.group(1))
+                            if num_clean:
+                                reviews = num_clean
+                                break
+
+                    if reviews == "0":
+                        span_texts = page.evaluate('''() => {
+                            return Array.from(document.querySelectorAll('span'))
+                                        .map(s => s.textContent)
+                                        .filter(t => t && /^\\([\\d\\s,.\\u00A0]+\\)$/.test(t.trim()));
+                        }''')
+                        if span_texts:
+                            num_clean = re.sub(r'[^\d]', '', span_texts[0])
+                            if num_clean:
+                                reviews = num_clean
+
+                    # Fallback sur l'aria-label (ancienne méthode)
+                    if reviews == "0":
+                        review_span = page.locator('span[aria-label*="avis"], span[aria-label*="reviews"]').first
+                        if review_span.count() > 0:
+                            aria = review_span.get_attribute("aria-label")
+                            if aria:
+                                num_clean = re.sub(r'[^0-9]', '', aria)
+                                if num_clean:
+                                    reviews = num_clean
 
                     # Si toujours 0, on cherche entre parenthèses dans le bloc note
                     if reviews == "0" and f7nice.count() > 0:
                         m = re.search(r'\(([0-9\s]+)\)', f7nice.text_content())
                         if m:
                             reviews = re.sub(r'[^0-9]', '', m.group(1))
+
+                    # Si toujours 0, on utilise les données extraites depuis le feed de recherche
+                    if reviews == "0" and url in feed_data:
+                        feed_aria = feed_data[url]
+                        match = re.search(r'([\d\s,\.]+)\s*(?:avis|reviews)', feed_aria, re.IGNORECASE)
+                        if match:
+                            num_clean = re.sub(r'[^\d]', '', match.group(1))
+                            if num_clean:
+                                reviews = num_clean
+
+                        if reviews == "0":
+                            # Cas de repli, le format de aria-label est souvent "4.7 stars 1,792 Reviews"
+                            match_num = re.search(r'stars?\s+([\d\s,\.]+)', feed_aria, re.IGNORECASE)
+                            if not match_num:
+                                match_num = re.search(r'étoiles?\s+([\d\s,\.]+)', feed_aria, re.IGNORECASE)
+                            if match_num:
+                                num_clean = re.sub(r'[^\d]', '', match_num.group(1))
+                                if num_clean:
+                                    reviews = num_clean
 
                 except Exception as e:
                     print(f"Extraction error: {e}")
@@ -177,7 +258,7 @@ def main():
         except:
             return -1.0
 
-    leads.sort(key=rating_key, reverse=True)
+    # NO FILTER OR SORT BY RATING IS APPLIED TO ENSURE WE GET ALL LEADS, INCLUDING THE LOWEST RATED ONES.
 
     safe_spec = re.sub(r'[^a-zA-Z0-9]', '_', specialty.lower())
     safe_loc = re.sub(r'[^a-zA-Z0-9]', '_', location.lower())
