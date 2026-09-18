@@ -139,66 +139,71 @@ def main():
                         elif "5" in text_block:
                             rating = "5.0"
 
-                    # Extraction du nombre d'avis
-                    button_texts = page.evaluate('''() => {
-                        return Array.from(document.querySelectorAll('button'))
-                                    .map(b => b.textContent)
-                                    .filter(t => t && (/\\bavis\\b/i.test(t) || /\\breviews\\b/i.test(t)));
-                    }''')
+                    # Extraction robuste du nombre d'avis
+                    # On cible l'élément parent des étoiles qui possède l'attribut aria-label complet.
+                    # Exemple: "4.7 étoiles 34 avis" ou "4.7 stars 34 reviews"
+                    parent_aria = f7nice.evaluate('''element => {
+                        let current = element;
+                        for(let i=0; i<3; i++) {
+                            if(current && current.hasAttribute('aria-label') && (current.getAttribute('aria-label').toLowerCase().includes('avis') || current.getAttribute('aria-label').toLowerCase().includes('reviews'))) {
+                                return current.getAttribute('aria-label');
+                            }
+                            if(current) current = current.parentElement;
+                        }
 
-                    for text in button_texts:
-                        match = re.search(r'([\d\s,\.]+)\s*(?:avis|reviews)', text, re.IGNORECASE)
-                        if match:
-                            num_clean = re.sub(r'[^\d]', '', match.group(1))
-                            if num_clean:
-                                reviews = num_clean
-                                break
+                        // Fallback: search globally for the star rating aria-label
+                        const globalSpan = document.querySelector('span[aria-label*="avis"], span[aria-label*="reviews"]');
+                        if(globalSpan) return globalSpan.getAttribute('aria-label');
 
-                    if reviews == "0":
-                        span_texts = page.evaluate('''() => {
-                            return Array.from(document.querySelectorAll('span'))
-                                        .map(s => s.textContent)
-                                        .filter(t => t && /^\\([\\d\\s,.\\u00A0]+\\)$/.test(t.trim()));
+                        // Fallback: search globally for a button containing reviews
+                        const btns = Array.from(document.querySelectorAll('button'));
+                        const reviewBtn = btns.find(b => b.textContent && (b.textContent.toLowerCase().includes('avis') || b.textContent.toLowerCase().includes('reviews')));
+                        if(reviewBtn) return reviewBtn.textContent;
+
+                        return null;
+                    }''') if f7nice.count() > 0 else None
+
+                    if not parent_aria:
+                        parent_aria = page.evaluate('''() => {
+                            const globalSpan = document.querySelector('span[aria-label*="avis"], span[aria-label*="reviews"]');
+                            if(globalSpan) return globalSpan.getAttribute('aria-label');
+                            const btns = Array.from(document.querySelectorAll('button'));
+                            const reviewBtn = btns.find(b => b.textContent && (b.textContent.toLowerCase().includes('avis') || b.textContent.toLowerCase().includes('reviews')));
+                            if(reviewBtn) return reviewBtn.textContent;
+                            return null;
                         }''')
-                        if span_texts:
-                            num_clean = re.sub(r'[^\d]', '', span_texts[0])
-                            if num_clean:
-                                reviews = num_clean
 
-                    # Fallback sur l'aria-label (ancienne méthode)
-                    if reviews == "0":
-                        review_span = page.locator('span[aria-label*="avis"], span[aria-label*="reviews"]').first
-                        if review_span.count() > 0:
-                            aria = review_span.get_attribute("aria-label")
-                            if aria:
-                                num_clean = re.sub(r'[^0-9]', '', aria)
-                                if num_clean:
-                                    reviews = num_clean
-
-                    # Si toujours 0, on cherche entre parenthèses dans le bloc note
-                    if reviews == "0" and f7nice.count() > 0:
-                        m = re.search(r'\(([0-9\s]+)\)', f7nice.text_content())
-                        if m:
-                            reviews = re.sub(r'[^0-9]', '', m.group(1))
-
-                    # Si toujours 0, on utilise les données extraites depuis le feed de recherche
-                    if reviews == "0" and url in feed_data:
-                        feed_aria = feed_data[url]
-                        match = re.search(r'([\d\s,\.]+)\s*(?:avis|reviews)', feed_aria, re.IGNORECASE)
+                    if parent_aria:
+                        match = re.search(r'([\d\s,\.]+)\s*(?:avis|reviews)', parent_aria, re.IGNORECASE)
                         if match:
                             num_clean = re.sub(r'[^\d]', '', match.group(1))
                             if num_clean:
                                 reviews = num_clean
 
-                        if reviews == "0":
-                            # Cas de repli, le format de aria-label est souvent "4.7 stars 1,792 Reviews"
-                            match_num = re.search(r'stars?\s+([\d\s,\.]+)', feed_aria, re.IGNORECASE)
-                            if not match_num:
-                                match_num = re.search(r'étoiles?\s+([\d\s,\.]+)', feed_aria, re.IGNORECASE)
-                            if match_num:
-                                num_clean = re.sub(r'[^\d]', '', match_num.group(1))
+                    # Si toujours 0, on cherche entre parenthèses dans le bloc note ou on utilise les données extraites depuis le feed de recherche
+                    if reviews == "0":
+                        if f7nice.count() > 0:
+                            m = re.search(r'\(([0-9\s]+)\)', f7nice.text_content())
+                            if m:
+                                reviews = re.sub(r'[^0-9]', '', m.group(1))
+
+                        if reviews == "0" and url in feed_data:
+                            feed_aria = feed_data[url]
+                            match = re.search(r'([\d\s,\.]+)\s*(?:avis|reviews)', feed_aria, re.IGNORECASE)
+                            if match:
+                                num_clean = re.sub(r'[^\d]', '', match.group(1))
                                 if num_clean:
                                     reviews = num_clean
+
+                            if reviews == "0":
+                                # Cas de repli, le format de aria-label est souvent "4.7 stars 1,792 Reviews"
+                                match_num = re.search(r'stars?\s+([\d\s,\.]+)', feed_aria, re.IGNORECASE)
+                                if not match_num:
+                                    match_num = re.search(r'étoiles?\s+([\d\s,\.]+)', feed_aria, re.IGNORECASE)
+                                if match_num:
+                                    num_clean = re.sub(r'[^\d]', '', match_num.group(1))
+                                    if num_clean:
+                                        reviews = num_clean
 
                 except Exception as e:
                     print(f"Extraction error: {e}")

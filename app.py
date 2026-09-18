@@ -7,6 +7,7 @@ import sys
 import re
 import io
 import zipfile
+import datetime
 
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
@@ -54,6 +55,9 @@ if submitted:
                 st.dataframe(df)
 
                 # Création d'une archive ZIP en mémoire contenant des lots de 50 lignes maximum
+                current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                base_name = f"Leads_{safe_spec}_{safe_loc}_{current_date}"
+
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     chunk_size = 50
@@ -61,13 +65,13 @@ if submitted:
                     for i in range(num_chunks):
                         chunk = df.iloc[i * chunk_size : (i + 1) * chunk_size]
                         csv_data = chunk.to_csv(index=False).encode('utf-8')
-                        zip_file.writestr(f"Leads_part{i + 1}.csv", csv_data)
+                        zip_file.writestr(f"{base_name}_part{i + 1}.csv", csv_data)
 
                 zip_buffer.seek(0)
                 st.download_button(
                     label="Télécharger les résultats (ZIP)",
                     data=zip_buffer,
-                    file_name=f"leads_{safe_spec}_{safe_loc}.zip",
+                    file_name=f"{base_name}.zip",
                     mime="application/zip",
                 )
             else:
