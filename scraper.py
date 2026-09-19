@@ -118,7 +118,11 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(1500)
+                try:
+                    # Dynamic wait for main heading element reduces execution time per place
+                    page.wait_for_selector('h1.DUwDvf', state='attached', timeout=5000)
+                except Exception:
+                    pass
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.text_content() if name_locator.count() > 0 else "N/A"
