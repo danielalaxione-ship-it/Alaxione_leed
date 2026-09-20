@@ -118,7 +118,11 @@ def main():
             print(f"Scraping place {i+1}/{len(place_urls)}...")
             try:
                 page.goto(url)
-                page.wait_for_timeout(1500)
+                # ⚡ Bolt: Replace static sleep with dynamic wait to reduce execution time per lead
+                try:
+                    page.wait_for_selector('h1.DUwDvf', state='attached', timeout=3000)
+                except Exception:
+                    pass
 
                 name_locator = page.locator('h1.DUwDvf')
                 name = name_locator.first.text_content() if name_locator.count() > 0 else "N/A"
