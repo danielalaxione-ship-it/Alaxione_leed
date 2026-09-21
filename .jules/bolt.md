@@ -1,0 +1,3 @@
+## 2023-10-27 - Streamlit Caching for Subprocesses
+**Learning:** In Streamlit applications, executing synchronous subprocesses (like `playwright install`) on user interactions blocks the main thread and severely degrades performance on subsequent interactions. This is a common bottleneck when integrating command-line tools or installers within Streamlit forms.
+**Action:** Use Streamlit's `@st.cache_resource` decorator to wrap subprocess calls that only need to run once per application lifecycle, preventing redundant executions and blocking on repeated form submissions.
