@@ -1,0 +1,3 @@
+## 2026-09-22 - Prevent Redundant Subprocess Blocking in Streamlit
+**Learning:** In Streamlit applications, executing synchronous setup operations like `subprocess.run(["python", "-m", "playwright", "install", "chromium"])` directly inside the script block causes the main thread to block for several seconds on *every* single UI interaction (e.g. form submission or button click) since Streamlit re-runs the entire file from top to bottom.
+**Action:** Wrap such single-execution setup calls in a function decorated with `@st.cache_resource` to ensure they only run once per application lifecycle, preventing redundant executions and keeping the UI responsive on repeated interactions.
