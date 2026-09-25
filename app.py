@@ -10,6 +10,11 @@ import zipfile
 
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
+@st.cache_resource
+def install_playwright():
+    """Cache the installation to prevent redundant subprocess calls blocking the UI."""
+    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
+
 st.title("🎯 Alaxione - Générateur de Leads Médicaux")
 st.markdown("Recherchez des professionnels de santé et extrayez leurs coordonnées en un clic.")
 
@@ -30,7 +35,8 @@ if submitted:
             except:
                 pass
 
-        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
+        # Use the cached function instead of running it every time
+        install_playwright()
 
         safe_spec = re.sub(r'[^a-zA-Z0-9]', '_', specialty_clean.lower())
         safe_loc = re.sub(r'[^a-zA-Z0-9]', '_', location_clean.lower())
