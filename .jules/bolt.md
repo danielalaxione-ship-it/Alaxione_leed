@@ -1,0 +1,3 @@
+## 2024-05-18 - Caching Synchronous Operations in Streamlit
+**Learning:** In Streamlit applications, synchronous subprocess calls (like `playwright install`) executed within event handlers (like form submissions) block the main thread and cause unnecessary delays on every interaction if not managed properly. Because Streamlit re-runs the entire script on UI interactions, these operations repeat redundantly.
+**Action:** Use the `@st.cache_resource` decorator to wrap such initialization logic (e.g., dependency setup via subprocess) so that it only runs once per application lifecycle, preventing UI blocking on repeated interactions.
