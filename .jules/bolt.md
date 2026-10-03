@@ -1,0 +1,3 @@
+## 2024-06-12 - Streamlit synchronous subprocess blocking
+**Learning:** In Streamlit, the entire script reruns on every interaction. Synchronous system calls (like `subprocess.run` for installing dependencies) placed inside event handlers will block the main thread and delay the UI update on every single interaction if not cached, unnecessarily slowing down the app experience.
+**Action:** Always wrap application-lifecycle initialization commands (like `playwright install`) in `@st.cache_resource` or `@st.cache_data` in Streamlit apps to ensure they only execute once and don't block subsequent reruns.
