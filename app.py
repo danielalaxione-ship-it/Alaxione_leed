@@ -8,6 +8,13 @@ import re
 import io
 import zipfile
 
+# ⚡ BOLT OPTIMIZATION: Cache the Playwright installation to avoid
+# redundantly running the subprocess on every search/interaction.
+@st.cache_resource
+def install_playwright():
+    """Run playwright install chromium only once per app lifecycle."""
+    subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
+
 st.set_page_config(page_title="Alaxione Lead Generator", layout="centered")
 
 st.title("🎯 Alaxione - Générateur de Leads Médicaux")
@@ -30,7 +37,7 @@ if submitted:
             except:
                 pass
 
-        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], capture_output=True)
+        install_playwright()
 
         safe_spec = re.sub(r'[^a-zA-Z0-9]', '_', specialty_clean.lower())
         safe_loc = re.sub(r'[^a-zA-Z0-9]', '_', location_clean.lower())
