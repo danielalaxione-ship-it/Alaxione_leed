@@ -1,0 +1,3 @@
+## 2024-10-04 - Cache Synchronous Subprocesses in Streamlit Apps
+**Learning:** In Streamlit applications, executing synchronous subprocesses (like installing dependencies using `subprocess.run()`) inside UI action blocks (e.g., `if submitted:`) creates a performance bottleneck by unnecessarily blocking the main thread during subsequent interactions. The application reruns the entire block, causing redundant and slow execution.
+**Action:** Always wrap initialization subprocesses (or any expensive, run-once logic) in functions decorated with `@st.cache_resource`. This ensures they are executed exactly once per application lifecycle, preventing thread-blocking delays on repeated UI interactions.
